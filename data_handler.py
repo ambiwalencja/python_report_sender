@@ -4,22 +4,49 @@ import xlsxwriter
 # getting the data from portal.futurecollars
 
 
-def get_data():
-    with open("token.txt", "r") as file:
-        access_token = file.readline()
-    request_url = 'https://api.portal.futurecollars.com/api/query/FutureCollars.Core.Contracts.Mentor.MentorTasks.Queries.MentorTasksHistory'
-    response = requests.post(
-        request_url,
-        json={ # jak tutaj było "data" to nie działało (był błąd 400 bad request), po zmianie na json zadziałało!
-            'DateCreatedFrom': "2022-02-19T00:00:00.000Z",
-            'DateCreatedTo': "2022-03-19T23:59:59.999Z"
-        },
-        headers={
-            'authorization': f'Bearer {access_token}'
-            # 'authorization': access_token
-        }
-    )
-    return response.json()
+class ApiData:
+    def __init__(self):
+        self.token_file = "token.txt"
+        self.request_url = ''
+        self.request_params = {}
+
+    def get_token(self):
+        with open(self.token_file, "r") as file:
+            access_token = file.readline()
+        return access_token
+
+    def get_token_from_refresh_token(self):
+        pass
+
+    def get_data(self, url, request_params):
+        self.request_url = url
+        response = requests.post(
+            self.request_url,
+            json=request_params,
+            headers={
+                'authorization': f'Bearer {self.get_token()}'
+            }
+        )
+        return response.json()
+
+    def get_task_list(self):
+        self.request_url = 'https://api.portal.futurecollars.com/api/query/' \
+                           'FutureCollars.Core.Contracts.Mentor.MentorTasks.Queries.MentorTasksHistory'
+        self.request_params = {
+                'DateCreatedFrom': "2022-03-02T00:00:00.000Z",
+                'DateCreatedTo': "2022-04-02T23:59:59.999Z"
+            }
+        return self.get_data(self.request_url, self.request_params)
+
+    def get_meetings_list(self):
+        self.request_url = 'https://api.portal.futurecollars.com/api/query/' \
+                           'FutureCollars.Core.Contracts.Mentor.Statistics.Queries.PersonalMeetingsStatistics'
+
+        self.request_params = {
+                'DateFrom': "2022-03-02T00:00:00.000Z",
+                'DateTo': "2022-04-02T23:59:59.999Z"
+            }
+        return self.get_data(self.request_url, self.request_params)
 
 
 def save_json_data_to_file(json_filename, data):
@@ -28,8 +55,13 @@ def save_json_data_to_file(json_filename, data):
     return True
 
 
+def read_data_from_json_file(filename):
+    with open(filename, encoding="utf8") as json_file:  # musialam dodać encoding, bo inaczej nie chciało czytać
+        data = json.load(json_file)
+    return data
+
+
 def write_headers_to_file(worksheet, data):
-    # tutaj przekleić fragment z wypełnianiem pierwszego wiersza kluczami
     row = 0
     col = 0
     headers_dict = data[0]
@@ -61,15 +93,7 @@ def save_data_to_file(filename, data):
                 worksheet.write(row, col, task[key])
                 col += 1
     workbook.close()
-    # with open(filename, 'w', encoding='utf-8') as f:
-    #     f.write(str(data))
     return True
-
-
-def read_data_from_json_file(filename):
-    with open(filename, encoding="utf8") as json_file:  # musialam dodać encoding, bo inaczej nie chciało czytać
-        data = json.load(json_file)
-    return data
 
 
 def create_mentor_list(data): # funkcja do opracowania
@@ -97,17 +121,15 @@ def create_files_for_mentors(mentor_list, data):
 
 
 # ___________________________________________________________________________________________________________
-# print(get_data()[0]["MentorName"])  # this lets me check how does my data look
+# print(get_data()[0]["MentorName"])  # just test
 # save_data_to_file(get_data())  # this i run once for writing data to file so i can use it for the further development
 
-# read_data_from_file('data.json')
-# print(read_data_from_file('data.json')[0]["MentorName"])
-
-my_data = read_data_from_json_file('data.json')
-# save_data_to_file('test', my_data)
-# my_filtered_data = filter_data('Arkadiusz Radek', my_data)
-# save_data_to_file('Arkadiusz_Radek.txt', my_filtered_data)
-my_mentor_list = create_mentor_list(my_data)
-create_files_for_mentors(my_mentor_list, my_data)
+# my_data = read_data_from_json_file('data.json')
+# save_data_to_file('test', my_data)  # just test
+# my_mentor_list = create_mentor_list(my_data)
+# create_files_for_mentors(my_mentor_list, my_data)
 # print(my_mentor_list)
 # print(len(my_filtered_data))
+
+my_data = ApiData()
+save_json_data_to_file('tasks2.json', my_data.get_task_list())
