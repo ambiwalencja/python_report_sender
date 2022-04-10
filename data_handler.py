@@ -4,8 +4,6 @@ import xlsxwriter
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-# getting the data from portal.futurecollars
-
 
 class ApiData:
     def __init__(self):
@@ -13,6 +11,8 @@ class ApiData:
         self.refresh_token_file = "refresh_token.txt"
         self.request_url = ''
         self.request_params = {}
+        self.task_list = []
+        self.meeting_list = []
         self.mentor_list = []  # moge raz pobrać liste mentorów z api a potem już brać z tego
 
     def get_token_from_refresh_token(self):
@@ -72,7 +72,120 @@ class ApiData:
             }
         return self.get_data(self.request_url, self.request_params)
 
+    def create_mentor_list(self, data):
+        for element in data:
+            if element['MentorName'] not in self.mentor_list:
+                self.mentor_list.append(element['MentorName'])
+        return self.mentor_list
 
+    def filter_tasks(self, mentor_name, task_list):
+        filtered_data = []
+        for element in task_list:
+            if element['MentorName'] == mentor_name:
+                filtered_data.append(element)
+        return filtered_data
+
+    def filter_meetings(self, mentor_name, meeting_list):
+        filtered_data = []
+        for element in meeting_list:
+            if '{} {}'.format(element['Mentor']['FirstName'], element['Mentor']['LastName']) == mentor_name:
+                filtered_data.append(element)
+        return filtered_data
+
+    def create_files_for_mentors(self, task_list, meeting_list):
+        xlsx_file = XlsxFile()
+        for name in self.mentor_list:
+            xlsx_file.create_xlsx_file(name)
+            xlsx_file.save_tasks_to_file(self.filter_tasks(name, task_list))
+            xlsx_file.save_meetings_to_file(self.filter_meetings(name, meeting_list))
+            xlsx_file.close_workbook()
+        return True
+
+
+class XlsxFile:
+    def __init__(self):
+        self.filename = ''
+        self.workbook = xlsxwriter.Workbook()
+        self.task_headers_list = self.create_task_headers_list()
+        self.meeting_headers_list = self.create_meeting_headers_list()
+
+    def create_task_headers_list(self):
+        headers = [
+            'MentorName',
+            'DateCompleted',
+            'DateAssigned',
+            'StudentName',
+            'Metadata: AssignmentName',
+            'Metadata: ProjectName',
+            'DateCreated'
+        ]
+        return headers
+
+    def create_meeting_headers_list(self):
+        headers = [
+            'MentorName',
+            'StudentName',
+            'Description',
+            'MeetingDate',
+            'TotalMeetingDuration',
+            'Rating'
+        ]
+        return headers
+
+    def create_xlsx_file(self, filename):
+        self.workbook = xlsxwriter.Workbook(f'{filename}.xlsx')
+
+    def close_workbook(self):
+        self.workbook.close()
+
+    def write_headers_to_file(self, worksheet, headers_list):
+        row = 0
+        col = 0
+        for header in headers_list:
+            worksheet.write(row, col, header)
+            col += 1
+        return True
+
+    def save_tasks_to_file(self, task_list):
+        worksheet = self.workbook.add_worksheet('Tasks')
+        self.write_headers_to_file(worksheet, self.task_headers_list)
+        row = 0
+        for task in task_list:
+            col = 0
+            row += 1
+            for header in self.task_headers_list:
+                if header == 'Metadata: AssignmentName':
+                    worksheet.write(row, col, task['Metadata']['AssignmentName'])
+                    col += 1
+                elif header == 'Metadata: ProjectName':
+                    worksheet.write(row, col, task['Metadata']['ProjectName'])
+                    col += 1
+                else:
+                    worksheet.write(row, col, task[header])
+                    col += 1
+        return True
+
+    def save_meetings_to_file(self, meetings_list):
+        worksheet = self.workbook.add_worksheet("Meetings")
+        self.write_headers_to_file(worksheet, self.meeting_headers_list)
+        row = 0
+        for task in meetings_list:
+            col = 0
+            row += 1
+            for header in self.meeting_headers_list:
+                if header == 'MentorName':
+                    worksheet.write(row, col, '{} {}'.format(task['Mentor']['FirstName'], task['Mentor']['LastName']))
+                    col += 1
+                elif header == 'StudentName':
+                    worksheet.write(row, col, '{} {}'.format(task['Student']['FirstName'], task['Student']['LastName']))
+                    col += 1
+                else:
+                    worksheet.write(row, col, task[header])
+                    col += 1
+        return True
+
+
+# FUNKCJE, KTÓRE ZOSTAJĄ LUZEM
 def save_json_data_to_file(json_filename, data):  # funkcja robocza, aby nie wysyłac zapytania do api za kazdym razem
     with open(json_filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)  # json.dump puts the data into file
@@ -95,68 +208,24 @@ def set_date():
     return date_from, date_to
 
 
-def write_headers_to_file(worksheet, data):
-    row = 0
-    col = 0
-    headers_dict = data[0]
-    for key in headers_dict:
-        if key == "Metadata":
-            for metadata_key in headers_dict[key].keys():
-                worksheet.write(row, col, f'{key}: {metadata_key}')
-                col += 1
-        else:
-            worksheet.write(row, col, key)
-            col += 1
-    return True
+# POBIERAM DANE I ZAPISUJĘ DO PLIKU
+# my_data = ApiData()
+# my_data.get_token_from_refresh_token()
+# save_json_data_to_file('meetings.json', my_data.get_meetings_list(set_date()[0], set_date()[1]))  # wersja robocza
+# save_json_data_to_file('tasks.json', my_data.get_task_list(set_date()[0], set_date()[1]))  # wersja robocza
+# CZYTAM Z PLIKU I ZAPISUJĘ DO XLSX:
+# my_task_list = read_data_from_json_file('tasks.json')
+# my_meetings_list = read_data_from_json_file('meetings.json')
+# my_data.create_mentor_list(my_task_list)
+# my_data.create_files_for_mentors(my_task_list, my_meetings_list)
 
-
-def save_data_to_file(filename, data):
-    workbook = xlsxwriter.Workbook(f'{filename}.xlsx')
-    worksheet = workbook.add_worksheet()
-    row = 0
-    write_headers_to_file(worksheet, data)
-    for task in data:
-        col = 0
-        row += 1
-        for key in task:
-            if key == "Metadata":
-                for metadata_key in task[key].keys():
-                    worksheet.write(row, col, task[key][metadata_key])
-                    col += 1
-            else:
-                worksheet.write(row, col, task[key])
-                col += 1
-    workbook.close()
-    return True
-
-# TODO: trzy poniższe funkcje są do zrobienia jako metody klasy DataApi; przy okazji trzeba je dostosować tez do
-# TODO: konsultacji, bo na razie działają na taskach tylko, podobnie zresztą jak zapisywanie do excela
-def create_mentor_list(data): # funkcja do opracowania; ta funkcja działa bezpośrednio na danych pobranych z api, więc może być metodą klasy ApiData
-    mentor_list = []
-    for task in data:
-        if task['MentorName'] not in mentor_list:
-            mentor_list.append(task['MentorName'])
-    return mentor_list
-
-
-def filter_data(mentor_name, data):  # j.w.
-    filtered_data = []
-    for task in data:
-        if task['MentorName'] == mentor_name:
-            filtered_data.append(task)
-    return filtered_data
-
-
-def create_files_for_mentors(mentor_list, data):
-    for name in mentor_list:
-        save_data_to_file(name, filter_data(name, data))
-    return True
-
-# tutaj pobieram dane z api i zapisuję do pliku. działa.
 my_data = ApiData()
 my_data.get_token_from_refresh_token()
-save_json_data_to_file('meetings.json', my_data.get_meetings_list(set_date()[0], set_date()[1]))
-# my_data = read_data_from_json_file('data.json')
+my_data.task_list = my_data.get_task_list(set_date()[0], set_date()[1])
+my_data.meeting_list = my_data.get_meetings_list(set_date()[0], set_date()[1])
+my_data.create_mentor_list(my_data.task_list)
+my_data.create_files_for_mentors(my_data.task_list, my_data.meeting_list)
+
 # save_data_to_file('test', my_data)  # just test
 # my_mentor_list = create_mentor_list(my_data)
 # create_files_for_mentors(my_mentor_list, my_data)
