@@ -13,7 +13,7 @@ class ApiData:
         self.request_params = {}
         self.task_list = []
         self.meeting_list = []
-        self.mentor_list = []  # moge raz pobrać liste mentorów z api a potem już brać z tego
+        self.mentor_list = []
 
     def get_token_from_refresh_token(self):
         self.request_url = 'https://api.portal.futurecollars.com/auth/connect/token'
@@ -113,8 +113,6 @@ class XlsxFile:
         self.meeting_headers_list = self.create_meeting_headers_list()
         self.mentor_task_list = []
         self.mentor_meetings_list = []
-        # self.task_number_for_mentor = 0
-        # self.meeting_duration_sum = ''
 
     def create_task_headers_list(self):
         headers = [
@@ -140,7 +138,7 @@ class XlsxFile:
         return headers
 
     def create_xlsx_file(self, filename):
-        self.workbook = xlsxwriter.Workbook(f'{filename}.xlsx')
+        self.workbook = xlsxwriter.Workbook(f'attachments/{filename}.xlsx')
 
     def close_workbook(self):
         self.workbook.close()
