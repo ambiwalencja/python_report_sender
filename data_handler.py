@@ -96,8 +96,11 @@ class ApiData:
         xlsx_file = XlsxFile()
         for name in self.mentor_list:
             xlsx_file.create_xlsx_file(name)
-            xlsx_file.save_tasks_to_file(self.filter_tasks(name, task_list))
-            xlsx_file.save_meetings_to_file(self.filter_meetings(name, meeting_list))
+            xlsx_file.mentor_task_list = self.filter_tasks(name, task_list)
+            xlsx_file.mentor_meetings_list = self.filter_meetings(name, meeting_list)
+            xlsx_file.save_tasks_to_file()
+            xlsx_file.save_meetings_to_file()
+            xlsx_file.add_summary_to_file()
             xlsx_file.close_workbook()
         return True
 
@@ -108,6 +111,10 @@ class XlsxFile:
         self.workbook = xlsxwriter.Workbook()
         self.task_headers_list = self.create_task_headers_list()
         self.meeting_headers_list = self.create_meeting_headers_list()
+        self.mentor_task_list = []
+        self.mentor_meetings_list = []
+        # self.task_number_for_mentor = 0
+        # self.meeting_duration_sum = ''
 
     def create_task_headers_list(self):
         headers = [
@@ -146,11 +153,11 @@ class XlsxFile:
             col += 1
         return True
 
-    def save_tasks_to_file(self, task_list):
+    def save_tasks_to_file(self):
         worksheet = self.workbook.add_worksheet('Tasks')
         self.write_headers_to_file(worksheet, self.task_headers_list)
         row = 0
-        for task in task_list:
+        for task in self.mentor_task_list:
             col = 0
             row += 1
             for header in self.task_headers_list:
@@ -165,24 +172,42 @@ class XlsxFile:
                     col += 1
         return True
 
-    def save_meetings_to_file(self, meetings_list):
+    def save_meetings_to_file(self):
         worksheet = self.workbook.add_worksheet("Meetings")
         self.write_headers_to_file(worksheet, self.meeting_headers_list)
         row = 0
-        for task in meetings_list:
+        for meeting in self.mentor_meetings_list:
             col = 0
             row += 1
             for header in self.meeting_headers_list:
                 if header == 'MentorName':
-                    worksheet.write(row, col, '{} {}'.format(task['Mentor']['FirstName'], task['Mentor']['LastName']))
+                    worksheet.write(row, col, '{} {}'.format(meeting['Mentor']['FirstName'], meeting['Mentor']['LastName']))
                     col += 1
                 elif header == 'StudentName':
-                    worksheet.write(row, col, '{} {}'.format(task['Student']['FirstName'], task['Student']['LastName']))
+                    worksheet.write(row, col, '{} {}'.format(meeting['Student']['FirstName'], meeting['Student']['LastName']))
                     col += 1
                 else:
-                    worksheet.write(row, col, task[header])
+                    worksheet.write(row, col, meeting[header])
                     col += 1
         return True
+
+    def sum_meetings_duration(self):
+        meeting_duration_list = []
+        for meeting in self.mentor_meetings_list:
+            meeting_duration_list.append(meeting['TotalMeetingDuration'])
+        time_sum = timedelta()
+        for time in meeting_duration_list:
+            (h, m, s) = time.split(':')
+            duration = timedelta(hours=int(h), minutes=int(m), seconds=int(s))
+            time_sum += duration
+        return str(time_sum)
+
+    def add_summary_to_file(self):
+        worksheet = self.workbook.add_worksheet('Summary')
+        worksheet.write(0, 0, "Number of completed tasks")
+        worksheet.write(0, 1, len(self.mentor_task_list))
+        worksheet.write(1, 0, "Meetings duration sum")
+        worksheet.write(1, 1, self.sum_meetings_duration())
 
 
 # FUNKCJE, KTÓRE ZOSTAJĄ LUZEM
@@ -226,8 +251,5 @@ my_data.meeting_list = my_data.get_meetings_list(set_date()[0], set_date()[1])
 my_data.create_mentor_list(my_data.task_list)
 my_data.create_files_for_mentors(my_data.task_list, my_data.meeting_list)
 
-# save_data_to_file('test', my_data)  # just test
-# my_mentor_list = create_mentor_list(my_data)
-# create_files_for_mentors(my_mentor_list, my_data)
 
 
