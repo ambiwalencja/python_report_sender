@@ -18,7 +18,7 @@ class Mailbox:
         return True
 
 
-class Email:
+class Email:  # to może być modelem, jeśli chciałabym zapisywać to do bazy danych
     def __init__(self):
         self.subject = ''
         self.content = ''
@@ -32,25 +32,26 @@ class Email:
         return True
 
     def send_email(self, my_username, recipient):
-        yag = yagmail.SMTP(my_username)
+        yag = yagmail.SMTP(my_username)  # to może przestać działać, jak wrzucę to na serwer. możliwe, że trzeba będzie
+            # wtedy poprosić digital ocean, żeby zezwolili  na wysyłanie maili (otwarcie portu 465)
         yag.send(recipient, self.subject, self.content, self.attachment)
         return True
 
 
 class ApiData:
     def __init__(self):
-        self.token_file = "token.txt"
+        self.token_file = "token.txt"  # dodatkowy model trzymający wyłącznie autoryzację
         self.refresh_token_file = "refresh_token.txt"
-        self.request_url = ''
-        self.request_params = {}
+        # self.request_url = ''
+        # self.request_params = {}
         self.task_list = []
         self.meeting_list = []
         self.mentor_list = []
 
     def get_token_from_refresh_token(self):
-        self.request_url = 'https://api.portal.futurecollars.com/auth/connect/token'
+        request_url = 'https://api.portal.futurecollars.com/auth/connect/token'
         response = requests.post(
-            self.request_url,
+            request_url,
             data= {  # to jest niezmiennie z zakładki payload wzięte
                 'grant_type': 'refresh_token',
                 'scope': 'openid offline_access future-collars.api',
@@ -75,9 +76,10 @@ class ApiData:
         return token
 
     def get_data(self, url, request_params):
-        self.request_url = url
+        # self.request_url = url
         response = requests.post(
-            self.request_url,
+            # self.request_url,
+            url,
             json=request_params,
             headers={
                 'authorization': f'Bearer {self.get_token_from_file(self.token_file)}'
@@ -86,23 +88,60 @@ class ApiData:
         return response.json()
 
     def get_task_list(self, date_from, date_to):
-        self.request_url = 'https://api.portal.futurecollars.com/api/query/' \
+        # to mogłoby być w pliku models.py jako metoda tej klasy/modelu autoryzacyjnego
+        request_url = 'https://api.portal.futurecollars.com/api/query/' \
                            'FutureCollars.Core.Contracts.Mentor.MentorTasks.Queries.MentorTasksHistory'
-        self.request_params = {
+        request_params = {
                 'DateCreatedFrom': date_from,
                 'DateCreatedTo': date_to
             }
-        return self.get_data(self.request_url, self.request_params)
+        self.task_list = self.get_data(request_url, request_params)
+        return True
+        # zamiast tworzyć listę tasków to będę wpisywać każdy task jako rekord do bazy danych w modelu Task
+        # return self.get_data(request_url, request_params)
+
+    def filter_tasks_by_close_date(self):
+        temporary_task_list = []
+        for task in self.task_list:
+            if task['DateCompleted'] == None:
+                continue
+            else:
+                date_of_completion = datetime.strptime(task['DateCompleted'][0:10], '%Y-%m-%d')
+                date = datetime.today() - relativedelta(months=1)
+                if date_of_completion.month == date.month:
+                    temporary_task_list.append(task)
+        self.task_list = temporary_task_list
+        return True
+            # date_of_completion = datetime.strptime(task['DateCompleted'][0:10], '%Y-%m-%d')
+            # print(date_of_completion.month)
+            # print('mentor: {}, date of completion - full: {}'.format(task['MentorName'], task['DateCompleted']))
+            # if task['DateCompleted'] == None:
+            #     print("it was null")
+            #     self.task_list.remove(task)
+            # else:
+            #     date_of_completion = datetime.strptime(task['DateCompleted'][0:10], '%Y-%m-%d')
+            #     if date_of_completion.month <= datetime.today().month:
+            #         print(f'condition met - month of completion: {date_of_completion.month} '
+            #               f'month today: {datetime.today().month}')
+            #         self.task_list.remove(task)
+            #         #
+                # print(task['DateCompleted'][0:10])
+            # date_of_completion = datetime.strptime(task['DateCompleted'], '%Y-%m-%dT%H:%M:%S.%f')
+            # date_of_completion = datetime.strptime(task['DateCompleted'][0:10], '%Y-%m-%d')
+            # if date_of_completion.month <= datetime.today().month:
+            #     task_list.remove(task)
+                # task.delete()  # ?
 
     def get_meetings_list(self, date_from, date_to):
-        self.request_url = 'https://api.portal.futurecollars.com/api/query/' \
+        request_url = 'https://api.portal.futurecollars.com/api/query/' \
                            'FutureCollars.Core.Contracts.Mentor.Statistics.Queries.PersonalMeetingsStatistics'
-
-        self.request_params = {
+        request_params = {
                 'DateFrom': date_from,
                 'DateTo': date_to
             }
-        return self.get_data(self.request_url, self.request_params)
+        self.meeting_list = self.get_data(request_url, request_params)
+        return True
+        # return self.get_data(request_url, request_params)
 
     def create_mentor_list(self, data):
         for element in data:
@@ -241,6 +280,7 @@ class XlsxFile:
 
 
 # FUNKCJE, KTÓRE ZOSTAJĄ LUZEM
+# te klasy mogą własnie siedzieć w pliku utils/util, jako takie, które mogą się przydać w kilku miejscach
 def save_json_data_to_file(json_filename, data):  # funkcja robocza, aby nie wysyłac zapytania do api za kazdym razem
     with open(json_filename, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=4)  # json.dump puts the data into file
@@ -258,6 +298,17 @@ def set_date():
     date_from = date_from.replace(day=1)
     date_to = date_from - timedelta(days=1)
     date_from = date_from - relativedelta(months=1)
+    date_from = '{}T00:00:00.000Z'.format(date_from.strftime('%Y-%m-%d'))
+    date_to = '{}T23:59:59.999Z'.format(date_to.strftime('%Y-%m-%d'))
+    return date_from, date_to
+
+
+# version of date setting for tasks, to catch tasks from previous month that were completed that month
+def set_date_2_months():
+    date_from = datetime.today()
+    date_from = date_from.replace(day=1)
+    date_to = date_from - timedelta(days=1)
+    date_from = date_from - relativedelta(months=2)  # we take tasks from 2 months and then filter by close date
     date_from = '{}T00:00:00.000Z'.format(date_from.strftime('%Y-%m-%d'))
     date_to = '{}T23:59:59.999Z'.format(date_to.strftime('%Y-%m-%d'))
     return date_from, date_to
