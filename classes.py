@@ -42,8 +42,6 @@ class ApiData:
     def __init__(self):
         self.token_file = "token.txt"  # dodatkowy model trzymający wyłącznie autoryzację
         self.refresh_token_file = "refresh_token.txt"
-        # self.request_url = ''
-        # self.request_params = {}
         self.task_list = []
         self.meeting_list = []
         self.mentor_list = []
@@ -76,9 +74,7 @@ class ApiData:
         return token
 
     def get_data(self, url, request_params):
-        # self.request_url = url
         response = requests.post(
-            # self.request_url,
             url,
             json=request_params,
             headers={
@@ -98,7 +94,6 @@ class ApiData:
         self.task_list = self.get_data(request_url, request_params)
         return True
         # zamiast tworzyć listę tasków to będę wpisywać każdy task jako rekord do bazy danych w modelu Task
-        # return self.get_data(request_url, request_params)
 
     def filter_tasks_by_close_date(self):
         temporary_task_list = []
@@ -112,25 +107,6 @@ class ApiData:
                     temporary_task_list.append(task)
         self.task_list = temporary_task_list
         return True
-            # date_of_completion = datetime.strptime(task['DateCompleted'][0:10], '%Y-%m-%d')
-            # print(date_of_completion.month)
-            # print('mentor: {}, date of completion - full: {}'.format(task['MentorName'], task['DateCompleted']))
-            # if task['DateCompleted'] == None:
-            #     print("it was null")
-            #     self.task_list.remove(task)
-            # else:
-            #     date_of_completion = datetime.strptime(task['DateCompleted'][0:10], '%Y-%m-%d')
-            #     if date_of_completion.month <= datetime.today().month:
-            #         print(f'condition met - month of completion: {date_of_completion.month} '
-            #               f'month today: {datetime.today().month}')
-            #         self.task_list.remove(task)
-            #         #
-                # print(task['DateCompleted'][0:10])
-            # date_of_completion = datetime.strptime(task['DateCompleted'], '%Y-%m-%dT%H:%M:%S.%f')
-            # date_of_completion = datetime.strptime(task['DateCompleted'][0:10], '%Y-%m-%d')
-            # if date_of_completion.month <= datetime.today().month:
-            #     task_list.remove(task)
-                # task.delete()  # ?
 
     def get_meetings_list(self, date_from, date_to):
         request_url = 'https://api.portal.futurecollars.com/api/query/' \
@@ -141,7 +117,6 @@ class ApiData:
             }
         self.meeting_list = self.get_data(request_url, request_params)
         return True
-        # return self.get_data(request_url, request_params)
 
     def create_mentor_list(self, data):
         for element in data:

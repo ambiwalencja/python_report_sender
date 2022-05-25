@@ -1,6 +1,5 @@
 from classes import ApiData, set_date, set_date_2_months
 # from classes import read_data_from_json_file # ROBOCZA LINIJKA
-from datetime import datetime, timedelta
 
 
 # POBIERAM DANE I ZAPISUJĘ DO PLIKU
@@ -25,16 +24,3 @@ my_data.get_meetings_list('2022-05-05T00:00:00.000Z', set_date()[1])
 my_data.create_mentor_list(my_data.task_list)
 my_data.create_files_for_mentors(my_data.task_list, my_data.meeting_list)
 
-
-# ROBOCZE CD
-# my_data.task_list = read_data_from_json_file('tasks_debug.json')
-# for task in my_data.task_list:
-#     print('element: {} n/'.format(task))
-# print(f'length before: {len(my_data.task_list)}')
-# my_data.filter_tasks_by_close_date()
-# print(f'length after: {len(my_data.task_list)}')
-# print(f'list after:')
-# for task in my_data.task_list:
-#     print(task['DateCompleted'])
-# for task in my_data.task_list:
-#     print('element: {} n/'.format(task))
