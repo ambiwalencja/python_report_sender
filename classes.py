@@ -122,28 +122,75 @@ class ApiData:
         for element in data:
             if element['MentorName'] not in self.mentor_list:
                 self.mentor_list.append(element['MentorName'])
-        return self.mentor_list
+        return True
 
-    def filter_tasks(self, mentor_name, task_list):
+    def create_mentor_list_static(self):
+        self.mentor_list = [
+            'Michał Ćwiok',
+            'Przemysław Baran',
+            'Leszek Stańco',
+            'Marcin Czajkowski',
+            'Tomasz Szreder',
+            'Dariusz Lipiński',
+            'Krzysztof Szyling',
+            'Arkadiusz Modzelewski',
+            'Mateusz Zimoch',
+            'Piotr Glinka',
+            'Jakub Miksa',
+            'Mateusz Dalba',
+            'Dorota Gawrońska-Popa',
+            'Mikołaj Kubera',
+            'Mateusz Rajek',
+            'Krzysztof Mendrek',
+            'Bartosz Konatowski',
+            'Bartosz Butrym',
+            'Radosław Dąbrowski',
+            'Mateusz Marczak',
+            'Paweł Nowosielski',
+            'Dominika Zeliasz',
+            'Łukasz Kozarski',
+            'Robert Górzyński',
+            'Mateusz Wiśniewicz',
+            'Marta Janas',
+            'Izabela Taborowska',
+            'Bartosz Jarek',
+            'Marta Taborowska',
+            'Andżelika Kowal',
+            'Olga Wojnarowska',
+            'Małgorzata Kowalska',
+            'Arkadiusz Radek',
+            'Szymon Baziński',
+            'Karol Rutkowski',
+            'Tomasz Gens',
+            'Anna Liszewska-Molenda',
+            'Zuza Ledworowska',
+            'Anna Król',
+            'Magda Paciorek'
+        ]
+        return True
+
+    def filter_tasks(self, mentor_name):
         filtered_data = []
-        for element in task_list:
+        for element in self.task_list:
             if element['MentorName'] == mentor_name:
                 filtered_data.append(element)
         return filtered_data
 
-    def filter_meetings(self, mentor_name, meeting_list):
+    def filter_meetings(self, mentor_name):
         filtered_data = []
-        for element in meeting_list:
+        for element in self.meeting_list:
             if '{} {}'.format(element['Mentor']['FirstName'], element['Mentor']['LastName']) == mentor_name:
                 filtered_data.append(element)
         return filtered_data
 
-    def create_files_for_mentors(self, task_list, meeting_list):
+    def create_files_for_mentors(self):
+        # self.create_mentor_list(self.task_list)
+        self.create_mentor_list_static()
         xlsx_file = XlsxFile()
         for name in self.mentor_list:
             xlsx_file.create_xlsx_file(name)
-            xlsx_file.mentor_task_list = self.filter_tasks(name, task_list)
-            xlsx_file.mentor_meetings_list = self.filter_meetings(name, meeting_list)
+            xlsx_file.mentor_task_list = self.filter_tasks(name)
+            xlsx_file.mentor_meetings_list = self.filter_meetings(name)
             xlsx_file.save_tasks_to_file()
             xlsx_file.save_meetings_to_file()
             xlsx_file.add_summary_to_file()
