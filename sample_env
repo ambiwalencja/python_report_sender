@@ -1,4 +1,6 @@
 TOKEN_URL=asd
-AURHORIZATION=asd
+AUTHORIZATION=asd
 MEETINGS_URL=asd
 TASKS_URL=asd
+
+# you also need token.txt and refresh_token.txt
