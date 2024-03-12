@@ -1,4 +1,9 @@
 from classes import ApiData, set_date, set_date_2_months
+import os
+from dotenv import load_dotenv
+
+if os.name == "nt":
+    load_dotenv()
 
 my_data = ApiData()
 my_data.get_token_from_refresh_token()

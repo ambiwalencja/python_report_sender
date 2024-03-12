@@ -4,7 +4,7 @@ import json
 import xlsxwriter
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
-
+import os
 
 class Mailbox:
     def __init__(self):
@@ -47,16 +47,16 @@ class ApiData:
         self.mentor_list = []
 
     def get_token_from_refresh_token(self):
-        request_url = 'https://api.portal.futurecollars.com/auth/connect/token'
+        request_url = os.environ.get('TOKEN_URL')
         response = requests.post(
             request_url,
-            data= {  # to jest niezmiennie z zakładki payload wzięte
+            data= {
                 'grant_type': 'refresh_token',
                 'scope': 'openid offline_access future-collars.api',
-                'refresh_token': self.get_token_from_file(self.refresh_token_file)  # jednorazowy
+                'refresh_token': self.get_token_from_file(self.refresh_token_file)  # one-time
             },
             headers={
-                'authorization': 'Basic ZnV0dXJlLWNvbGxhcnMubWVudG9yOnNlY3JldA=='
+                'authorization': os.environ.get('AUTHORIZATION')
             }
         )
         self.write_token_to_file(response.json(), 'access_token', self.token_file)
@@ -85,8 +85,7 @@ class ApiData:
 
     def get_task_list(self, date_from, date_to):
         # to mogłoby być w pliku models.py jako metoda tej klasy/modelu autoryzacyjnego
-        request_url = 'https://api.portal.futurecollars.com/api/query/' \
-                           'FutureCollars.Core.Contracts.Mentor.MentorTasks.Queries.MentorTasksHistory'
+        request_url = os.environ.get('TASKS_URL')
         request_params = {
                 'DateCreatedFrom': date_from,
                 'DateCreatedTo': date_to
@@ -109,8 +108,7 @@ class ApiData:
         return True
 
     def get_meetings_list(self, date_from, date_to):
-        request_url = 'https://api.portal.futurecollars.com/api/query/' \
-                           'FutureCollars.Core.Contracts.Mentor.Statistics.Queries.PersonalMeetingsStatistics'
+        request_url = os.environ.get('MEETINGS_URL')
         request_params = {
                 'DateFrom': date_from,
                 'DateTo': date_to
@@ -128,44 +126,70 @@ class ApiData:
         self.mentor_list = [
             'Michał Ćwiok',
             'Przemysław Baran',
-            'Leszek Stańco',
-            'Marcin Czajkowski',
-            'Tomasz Szreder',
-            'Dariusz Lipiński',
-            'Krzysztof Szyling',
+            'Joanna Hryniewicz',
+            'Marcin Przybylski',
+            'Maciej Jędrzejewski',
             'Arkadiusz Modzelewski',
-            'Mateusz Zimoch',
-            'Piotr Glinka',
+            'Adrianna Napiórkowska',
             'Jakub Miksa',
             'Mateusz Dalba',
-            'Dorota Gawrońska-Popa',
-            'Mikołaj Kubera',
+            'Tomasz Siarnecki',
+            'Mikołaj Gronowski',
+            'Rafał Kamiński',
             'Mateusz Rajek',
             'Krzysztof Mendrek',
-            'Bartosz Konatowski',
-            'Bartosz Butrym',
-            'Radosław Dąbrowski',
-            'Mateusz Marczak',
-            'Paweł Nowosielski',
+            'Tomasz Wasilonek',
+            'Agnieszka Majmurek',
+            'Rafał Chełkowski',
+            'Tomasz Sochacki',
+            'Jakub Pisula',
+            'Patryk Stępniak',
+            'Ewa Kułakowska',
+            'Marek Wiśniewski',
+            'Bartosz Kamyszek',
+            'Konrad Strzelecki',
+            'Dagmara Leśniak',
             'Dominika Zeliasz',
             'Łukasz Kozarski',
-            'Robert Górzyński',
             'Mateusz Wiśniewicz',
-            'Marta Janas',
+            'Artur Dwojak',
+            'Michał Miętus',
+            'Wojciech Niekrasz',
+            'Michał Ziętkowski',
+            'Robert Górzyński',
             'Izabela Taborowska',
+            'Damian Wojewoda',
             'Bartosz Jarek',
-            'Marta Taborowska',
+            'Marcin Trochonowicz',
+            'Marta Taborowska-Grącka',
             'Andżelika Kowal',
-            'Olga Wojnarowska',
+            'Rafał Kielar',
+            'Natalia Nitkowska',
+            'Nicol Górecka',
             'Małgorzata Kowalska',
-            'Arkadiusz Radek',
-            'Szymon Baziński',
-            'Karol Rutkowski',
+            'Mariusz Duda',
+            'Anna Kaliska',
             'Tomasz Gens',
+            'Olga Wojnarowska',
+            'Olga Skoczek',
             'Anna Liszewska-Molenda',
-            'Zuza Ledworowska',
-            'Anna Król',
-            'Magda Paciorek'
+            'Aleksander Sadowski',
+            'Karol Kudła',
+            'Mateusz Głasek',
+            'Paweł Babul',
+            'Damian Marek',
+            'Bazyli Chodor',
+            'Rafał Juczewski',
+            'Hubert Pietroń',
+            'Jan Sandorski',
+            'Rafał Sochacki',
+            'Łukasz Daszkiewicz',
+            'Daniel Ziółkowski',
+            'Konrad Dziedzina',
+            'Wojciech Sławiński',
+            'Tomasz Różowski',
+            'Mateusz Dobrychłop',
+            'Hubert Kamiński'
         ]
         return True
 
@@ -215,7 +239,8 @@ class XlsxFile:
             'StudentName',
             'Metadata: AssignmentName',
             'Metadata: ProjectName',
-            'DateCreated'
+            'DateCreated',
+            'CourseName'
         ]
         return headers
 
@@ -289,7 +314,7 @@ class XlsxFile:
         time_sum = timedelta()
         for time in meeting_duration_list:
             (h, m, s) = time.split(':')
-            duration = timedelta(hours=int(h), minutes=int(m), seconds=int(s))
+            duration = timedelta(hours=int(h), minutes=int(m), seconds=float(s))
             time_sum += duration
         return str(time_sum)
 
@@ -303,19 +328,20 @@ class XlsxFile:
 
 # FUNKCJE, KTÓRE ZOSTAJĄ LUZEM
 # te klasy mogą własnie siedzieć w pliku utils/util, jako takie, które mogą się przydać w kilku miejscach
-def save_json_data_to_file(json_filename, data):  # funkcja robocza, aby nie wysyłac zapytania do api za kazdym razem
-    with open(json_filename, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)  # json.dump puts the data into file
-    return True
+
+# def save_json_data_to_file(json_filename, data):  # funkcja robocza, aby nie wysyłac zapytania do api za kazdym razem
+#     with open(json_filename, 'w', encoding='utf-8') as f:
+#         json.dump(data, f, ensure_ascii=False, indent=4)  # json.dump puts the data into file
+#     return True
+#
+#
+# def read_data_from_json_file(filename): # funkcja robocza 2
+#     with open(filename, encoding="utf8") as json_file:  # musialam dodać encoding, bo inaczej nie chciało czytać
+#         data = json.load(json_file)
+#     return data
 
 
-def read_data_from_json_file(filename): # funkcja robocza 2
-    with open(filename, encoding="utf8") as json_file:  # musialam dodać encoding, bo inaczej nie chciało czytać
-        data = json.load(json_file)
-    return data
-
-
-def set_date():
+def set_date():  # sets date range to the month before current one
     date_from = datetime.today()
     date_from = date_from.replace(day=1)
     date_to = date_from - timedelta(days=1)
